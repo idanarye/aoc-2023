@@ -83,6 +83,7 @@ function T:go()
     }, {'cargo', 'run', '--profile', T:build_profile(), '--', '--day', vim.fn.max(gen_all_implemented_days()), '--stdin'})
     j:write(data)
     j:write('\n\4')
+    j:close_stdin()
     j:wait()
 end
 
