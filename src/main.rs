@@ -7,4 +7,5 @@ aoc_main::main! {
     day1 : generator => part_1, part_2;
     day2 : generator => part_1, part_2;
     day3 : generator => part_1, part_2;
+    day4 : generator => part_1, part_2;
 }
