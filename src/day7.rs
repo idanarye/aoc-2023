@@ -1,4 +1,3 @@
-use std::cmp::Reverse;
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Display, Write};
 use std::str::FromStr;
@@ -80,20 +79,9 @@ pub fn generator(input: &str) -> Vec<RowData> {
         .collect()
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-enum HandType {
-    HighCard,
-    OnePair,
-    TwoPair,
-    ThreeOfAKind,
-    FullHouse,
-    FourOfAKind,
-    FiveOfAKind,
-}
-
 impl Hand {
-    fn hand_type(&self) -> HandType {
-        let mut groups = BTreeMap::<Card, usize>::new();
+    fn hand_type(&self) -> u8 {
+        let mut groups = BTreeMap::<Card, u8>::new();
         for card in self.0.iter() {
             *groups.entry(*card).or_default() += 1;
         }
@@ -106,20 +94,17 @@ impl Hand {
             }
         }
 
-        let mut cardinals = [0; 5];
-        for (cardinal, count) in cardinals.iter_mut().zip(groups.values()) {
+        let mut cardinals = [0; 2];
+        for (cardinal, count) in cardinals
+            .iter_mut()
+            .zip(groups.values().filter(|c| 1 < **c))
+        {
             *cardinal = *count;
         }
-        cardinals.sort_by_key(|c| Reverse(*c));
-        match cardinals {
-            [5, ..] => HandType::FiveOfAKind,
-            [4, ..] => HandType::FourOfAKind,
-            [3, 2, ..] => HandType::FullHouse,
-            [3, 1, ..] => HandType::ThreeOfAKind,
-            [2, 2, ..] => HandType::TwoPair,
-            [2, 1, ..] => HandType::OnePair,
-            [1, ..] => HandType::HighCard,
-            _ => panic!("Unrecognized hand {:?}", cardinals),
+        if cardinals[0] < cardinals[1] {
+            cardinals[0] + 4 * cardinals[1]
+        } else {
+            cardinals[1] + 4 * cardinals[0]
         }
     }
 
