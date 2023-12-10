@@ -1,5 +1,5 @@
 use std::fmt::{Display, Write};
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 #[derive(Debug)]
 pub struct VMatrix<T> {
@@ -30,6 +30,16 @@ impl<T> FromIterator<Option<T>> for VMatrix<T> {
 }
 
 impl<T> VMatrix<T> {
+    pub fn new(rows: usize, cols: usize, mut fill: impl FnMut((usize, usize)) -> T) -> Self {
+        Self {
+            cols,
+            rows,
+            values: (0..(rows * cols))
+                .map(|index| fill((index / cols, index % cols)))
+                .collect(),
+        }
+    }
+
     pub fn map<S>(self, mut dlg: impl FnMut(usize, T) -> S) -> VMatrix<S> {
         VMatrix {
             cols: self.cols,
@@ -91,20 +101,69 @@ impl<T> VMatrix<T> {
             })
     }
 
-    pub fn get(&self, index: (usize, usize)) -> Option<&T> {
-        let (row, col) = index;
+    pub fn coord_to_index(&self, (row, col): (usize, usize)) -> Option<usize> {
         if row < self.rows && col < self.cols {
-            Some(&self.values[row * self.cols + col])
+            Some(row * self.cols + col)
         } else {
             None
         }
+    }
+
+    pub fn index_to_coord(&self, index: usize) -> Option<(usize, usize)> {
+        if index < self.values.len() {
+            Some((index / self.cols, index % self.cols))
+        } else {
+            None
+        }
+    }
+
+    pub fn get(&self, coord: (usize, usize)) -> Option<&T> {
+        self.coord_to_index(coord).map(|i| &self.values[i])
+    }
+
+    pub fn get_mut(&mut self, coord: (usize, usize)) -> Option<&mut T> {
+        self.coord_to_index(coord).map(|i| &mut self.values[i])
+    }
+
+    pub fn motion(&self, start: (usize, usize), vec: (isize, isize)) -> Option<(usize, usize)> {
+        let new_row = usize::try_from(start.0 as isize + vec.0).ok()?;
+        if self.rows <= new_row {
+            return None;
+        }
+        let new_col = usize::try_from(start.1 as isize + vec.1).ok()?;
+        if self.cols <= new_col {
+            return None;
+        }
+        Some((new_row, new_col))
+    }
+
+    pub fn motions<'a>(
+        &'a self,
+        start: (usize, usize),
+        vecs: impl 'a + IntoIterator<Item = (isize, isize)>,
+    ) -> impl 'a + Iterator<Item = (usize, usize)> {
+        vecs.into_iter()
+            .filter_map(move |vec| self.motion(start, vec))
+    }
+
+    pub fn iter(&self) -> impl '_ + Iterator<Item = ((usize, usize), &T)> {
+        self.values
+            .iter()
+            .enumerate()
+            .map(|(i, value)| ((i / self.cols, i % self.cols), value))
     }
 }
 
 impl<T> Index<(usize, usize)> for VMatrix<T> {
     type Output = T;
 
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        self.get(index).expect("Invalid index")
+    fn index(&self, coord: (usize, usize)) -> &Self::Output {
+        self.get(coord).expect("Invalid coords")
+    }
+}
+
+impl<T> IndexMut<(usize, usize)> for VMatrix<T> {
+    fn index_mut(&mut self, coord: (usize, usize)) -> &mut Self::Output {
+        self.get_mut(coord).expect("Invalid coord")
     }
 }
