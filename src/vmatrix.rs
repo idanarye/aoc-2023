@@ -1,7 +1,7 @@
 use std::fmt::{Display, Write};
 use std::ops::{Index, IndexMut};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct VMatrix<T> {
     pub cols: usize,
     pub rows: usize,
@@ -38,6 +38,13 @@ impl<T> VMatrix<T> {
                 .map(|index| fill((index / cols, index % cols)))
                 .collect(),
         }
+    }
+
+    pub fn from_chars(input: &str, mut mapper: impl FnMut(char) -> T) -> Self {
+        input
+            .chars()
+            .map(|ch| if ch == '\n' { None } else { Some(mapper(ch)) })
+            .collect()
     }
 
     pub fn map<S>(self, mut dlg: impl FnMut(usize, T) -> S) -> VMatrix<S> {
@@ -81,6 +88,13 @@ impl<T> VMatrix<T> {
             target: self,
             formatter: fmt,
         }
+    }
+
+    pub fn to_display_simple<'a>(
+        &'a self,
+        value_formatter: impl 'a + Fn(&T) -> char,
+    ) -> impl 'a + Display {
+        self.to_display(move |fmt, _, value| fmt.write_char(value_formatter(value)))
     }
 
     pub fn neighbors_no_diag(&self, node: usize) -> impl '_ + Iterator<Item = usize> {
@@ -165,5 +179,14 @@ impl<T> Index<(usize, usize)> for VMatrix<T> {
 impl<T> IndexMut<(usize, usize)> for VMatrix<T> {
     fn index_mut(&mut self, coord: (usize, usize)) -> &mut Self::Output {
         self.get_mut(coord).expect("Invalid coord")
+    }
+}
+
+impl<T> Display for VMatrix<T>
+where
+    for<'a> &'a T: Into<char>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_display_simple(|value| value.into()).fmt(f)
     }
 }
