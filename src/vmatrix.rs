@@ -47,13 +47,13 @@ impl<T> VMatrix<T> {
             .collect()
     }
 
-    pub fn map<S>(self, mut dlg: impl FnMut(usize, T) -> S) -> VMatrix<S> {
+    pub fn map<S>(&self, mut dlg: impl FnMut(usize, &T) -> S) -> VMatrix<S> {
         VMatrix {
             cols: self.cols,
             rows: self.rows,
             values: self
                 .values
-                .into_iter()
+                .iter()
                 .enumerate()
                 .map(|(i, v)| dlg(i, v))
                 .collect(),

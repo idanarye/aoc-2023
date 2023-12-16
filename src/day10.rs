@@ -1,5 +1,6 @@
 use std::fmt::{Display, Write as _};
 
+use crate::common::direction::Direction;
 use crate::vmatrix::VMatrix;
 
 #[derive(Debug)]
@@ -17,27 +18,6 @@ enum Pipe {
     BendNW,
     BendSW,
     BendSE,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Direction {
-    North,
-    South,
-    West,
-    East,
-}
-
-impl Direction {
-    const ALL: [Direction; 4] = [Self::North, Self::South, Self::West, Self::East];
-
-    const fn motion(&self) -> (isize, isize) {
-        match self {
-            Direction::North => (-1, 0),
-            Direction::South => (1, 0),
-            Direction::West => (0, -1),
-            Direction::East => (0, 1),
-        }
-    }
 }
 
 impl Pipe {
