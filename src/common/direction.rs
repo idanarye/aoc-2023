@@ -17,4 +17,22 @@ impl Direction {
             Direction::East => (0, 1),
         }
     }
+
+    pub const fn clockwise(&self) -> Direction {
+        match self {
+            Direction::North => Self::East,
+            Direction::South => Self::West,
+            Direction::West => Self::North,
+            Direction::East => Self::South,
+        }
+    }
+
+    pub const fn counter_clockwise(&self) -> Direction {
+        match self {
+            Direction::North => Self::West,
+            Direction::South => Self::East,
+            Direction::West => Self::South,
+            Direction::East => Self::North,
+        }
+    }
 }

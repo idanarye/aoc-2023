@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::hash::Hash;
 use std::ops::Add;
 
@@ -66,42 +66,66 @@ where
         result
     }
 }
+
+#[derive(PartialEq)]
+struct HeapCell<K, C> {
+    key: K,
+    cost: C,
+}
+
+impl<K: PartialEq, C: PartialEq> Eq for HeapCell<K, C> {}
+
+impl<K: PartialEq, C: PartialOrd + Eq> PartialOrd for HeapCell<K, C> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        other.cost.partial_cmp(&self.cost)
+    }
+}
+
+impl<K: PartialEq, C: Ord> Ord for HeapCell<K, C> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.cost.cmp(&self.cost)
+    }
+}
+
 pub struct HashMapBfs<K, C> {
     cells: HashMap<K, BfsCell<K, C>>,
-    consider: VecDeque<K>,
+    consider: BinaryHeap<HeapCell<K, C>>,
 }
 
 impl<K, C> HashMapBfs<K, C>
 where
     K: PartialEq + Eq + Hash + Clone,
     for<'a> &'a C: Add<&'a C, Output = C>,
-    C: PartialOrd<C>,
+    C: PartialOrd<C> + Ord + Clone,
 {
     pub fn cost(&self, key: &K) -> Option<&C> {
         self.cells.get(key).map(|cell| &cell.cost)
     }
 
     pub fn add_root(&mut self, key: K, cost: C) {
-        self.cells
-            .insert(key.clone(), BfsCell { parent: None, cost });
-        self.consider.push_back(key)
+        self.cells.insert(
+            key.clone(),
+            BfsCell {
+                parent: None,
+                cost: cost.clone(),
+            },
+        );
+        self.consider.push(HeapCell { key, cost });
     }
 
     pub fn consider_next(&mut self) -> Option<K> {
-        self.consider.pop_front()
+        self.consider.pop().map(|hc| hc.key)
     }
 
     pub fn add_edge(&mut self, parent: K, key: K, additional_cost: C) -> bool {
         let new_cost = self.cost(&parent).unwrap() + &additional_cost;
-        if let Some(existing_cell) = self.cells.get(&key) {
-            // TODO: this may fail because I'm using VecDeque instead of a BinaryHeap
-            if new_cost < existing_cell.cost {
-                assert!(self.consider.contains(&key), "out of order");
-            } else {
-                return false;
-            }
+        if self.cells.get(&key).is_some() {
+            return false;
         }
-        self.consider.push_back(key.clone());
+        self.consider.push(HeapCell {
+            key: key.clone(),
+            cost: new_cost.clone(),
+        });
         self.cells.insert(
             key,
             BfsCell {
@@ -133,12 +157,12 @@ impl<K, C> Default for HashMapBfs<K, C>
 where
     K: PartialEq + Eq + Hash + Clone,
     for<'a> &'a C: Add<&'a C, Output = C>,
-    C: PartialOrd<C>,
+    C: PartialOrd<C> + Ord,
 {
     fn default() -> Self {
         Self {
             cells: HashMap::new(),
-            consider: VecDeque::new(),
+            consider: BinaryHeap::new(),
         }
     }
 }
