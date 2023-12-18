@@ -105,7 +105,7 @@ impl Tile {
 }
 
 impl VMatrix<Tile> {
-    fn calc(&self, start: (usize, usize), direction: Direction) -> usize {
+    fn calc(&self, start: [usize; 2], direction: Direction) -> usize {
         let mut bfs = HashMapBfs::default();
         bfs.add_root((start, direction), 0);
 
@@ -126,7 +126,7 @@ impl VMatrix<Tile> {
 }
 
 pub fn part_1(input: &VMatrix<Tile>) -> usize {
-    input.calc((0, 0), Direction::East)
+    input.calc([0, 0], Direction::East)
 }
 
 pub fn part_2(input: &VMatrix<Tile>) -> usize {
@@ -135,13 +135,13 @@ pub fn part_2(input: &VMatrix<Tile>) -> usize {
         .flat_map(|direction| {
             match direction {
                 Direction::North => (0..input.cols)
-                    .map(|col| (input.rows - 1, col))
+                    .map(|col| [input.rows - 1, col])
                     .collect_vec(),
-                Direction::South => (0..input.cols).map(|col| (0, col)).collect_vec(),
+                Direction::South => (0..input.cols).map(|col| [0, col]).collect_vec(),
                 Direction::West => (0..input.rows)
-                    .map(|row| (row, input.cols - 1))
+                    .map(|row| [row, input.cols - 1])
                     .collect_vec(),
-                Direction::East => (0..input.rows).map(|row| (row, 0)).collect_vec(),
+                Direction::East => (0..input.rows).map(|row| [row, 0]).collect_vec(),
             }
             .into_iter()
             .zip(std::iter::repeat(direction))

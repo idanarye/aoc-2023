@@ -73,10 +73,10 @@ impl VMatrix<Terrain> {
     ) -> bool {
         match dimension {
             Dimension::Rows => {
-                self.compare_impl(self.cols, |c| self[(i, c)] == self[(j, c)], allowed_smudges)
+                self.compare_impl(self.cols, |c| self[[i, c]] == self[[j, c]], allowed_smudges)
             }
             Dimension::Cols => {
-                self.compare_impl(self.rows, |r| self[(r, i)] == self[(r, j)], allowed_smudges)
+                self.compare_impl(self.rows, |r| self[[r, i]] == self[[r, j]], allowed_smudges)
             }
         }
     }

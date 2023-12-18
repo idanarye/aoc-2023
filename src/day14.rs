@@ -31,22 +31,22 @@ pub fn generator(input: &str) -> VMatrix<Tile> {
 }
 
 impl VMatrix<Tile> {
-    fn gen_four_ranges(&self) -> Vec<Vec<Vec<(usize, usize)>>> {
+    fn gen_four_ranges(&self) -> Vec<Vec<Vec<[usize; 2]>>> {
         vec![
             // North:
             (0..self.cols)
-                .map(move |col| (0..self.rows).map(move |row| (row, col)).collect_vec())
+                .map(move |col| (0..self.rows).map(move |row| [row, col]).collect_vec())
                 .collect_vec(),
             // West:
             (0..self.rows)
-                .map(move |row| (0..self.cols).map(move |col| (row, col)).collect_vec())
+                .map(move |row| (0..self.cols).map(move |col| [row, col]).collect_vec())
                 .collect_vec(),
             // South:
             (0..self.cols)
                 .map(move |col| {
                     (0..self.rows)
                         .rev()
-                        .map(move |row| (row, col))
+                        .map(move |row| [row, col])
                         .collect_vec()
                 })
                 .collect_vec(),
@@ -55,14 +55,14 @@ impl VMatrix<Tile> {
                 .map(move |row| {
                     (0..self.cols)
                         .rev()
-                        .map(move |col| (row, col))
+                        .map(move |col| [row, col])
                         .collect_vec()
                 })
                 .collect_vec(),
         ]
     }
 
-    fn tilt(&mut self, ranges: &[Vec<(usize, usize)>]) {
+    fn tilt(&mut self, ranges: &[Vec<[usize; 2]>]) {
         for range in ranges.iter() {
             let mut range = range.iter().copied();
             let mut pile_from = range.clone();

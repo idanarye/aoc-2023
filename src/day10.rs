@@ -5,7 +5,7 @@ use crate::vmatrix::VMatrix;
 
 #[derive(Debug)]
 pub struct Input {
-    start: (usize, usize),
+    start: [usize; 2],
     map: VMatrix<Pipe>,
 }
 
@@ -86,7 +86,7 @@ pub fn generator(input: &str) -> Input {
                 .map(|(col, c)| {
                     Some(match c {
                         'S' => {
-                            start = Some((row, col));
+                            start = Some([row, col]);
                             Pipe::Ground
                         }
                         '.' => Pipe::Ground,
@@ -112,9 +112,9 @@ pub fn generator(input: &str) -> Input {
 impl VMatrix<Pipe> {
     fn walk(
         &self,
-        start: (usize, usize),
+        start: [usize; 2],
         direction: Direction,
-    ) -> impl '_ + Iterator<Item = (usize, usize)> {
+    ) -> impl '_ + Iterator<Item = [usize; 2]> {
         let mut coord = start;
         let mut current_direction = Some(direction);
         std::iter::from_fn(move || {
@@ -128,7 +128,7 @@ impl VMatrix<Pipe> {
 }
 
 impl Input {
-    fn main_loop(&self) -> impl '_ + Iterator<Item = (usize, usize)> {
+    fn main_loop(&self) -> impl '_ + Iterator<Item = [usize; 2]> {
         for direction in Direction::ALL {
             let Some(coord) = self.map.motion(self.start, direction.motion()) else {
                 continue;
@@ -171,8 +171,8 @@ pub fn part_2(input: &Input) -> usize {
         PaintStatus::Blank
     });
 
-    fn expand((row, col): (usize, usize)) -> (usize, usize) {
-        (row * 2 + 1, col * 2 + 1)
+    fn expand([row, col]: [usize; 2]) -> [usize; 2] {
+        [row * 2 + 1, col * 2 + 1]
     }
 
     for coord in input.main_loop() {
@@ -186,7 +186,7 @@ pub fn part_2(input: &Input) -> usize {
         }
     }
 
-    let mut to_paint = vec![(0, 0)];
+    let mut to_paint = vec![[0, 0]];
 
     while let Some(coord) = to_paint.pop() {
         if !matches!(fillmap[coord], PaintStatus::Blank) {
@@ -200,7 +200,7 @@ pub fn part_2(input: &Input) -> usize {
 
     fillmap
         .iter()
-        .filter(|((row, col), paint_status)| {
+        .filter(|([row, col], paint_status)| {
             row % 2 == 1 && col % 2 == 1 && matches!(paint_status, PaintStatus::Blank)
         })
         .count()

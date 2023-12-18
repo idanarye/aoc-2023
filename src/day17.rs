@@ -10,7 +10,7 @@ pub fn generator(input: &str) -> VMatrix<usize> {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 struct State {
-    coord: (usize, usize),
+    coord: [usize; 2],
     steps: usize,
     direction: Direction,
 }
@@ -24,7 +24,7 @@ fn solve(
     for direction in [Direction::East, Direction::South] {
         bfs.add_root(
             State {
-                coord: (0, 0),
+                coord: [0, 0],
                 steps: 100, // to force a turn
                 direction,
             },
@@ -33,7 +33,7 @@ fn solve(
     }
 
     while let Some(state) = bfs.consider_next() {
-        if state.coord == (input.rows - 1, input.cols - 1) && can_turn(state.steps + 1) {
+        if state.coord == [input.rows - 1, input.cols - 1] && can_turn(state.steps + 1) {
             return *bfs.cost(&state).unwrap();
         }
 

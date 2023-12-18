@@ -9,12 +9,12 @@ pub enum Direction {
 impl Direction {
     pub const ALL: [Direction; 4] = [Self::North, Self::South, Self::West, Self::East];
 
-    pub const fn motion(&self) -> (isize, isize) {
+    pub const fn motion(&self) -> [isize; 2] {
         match self {
-            Direction::North => (-1, 0),
-            Direction::South => (1, 0),
-            Direction::West => (0, -1),
-            Direction::East => (0, 1),
+            Direction::North => [-1, 0],
+            Direction::South => [1, 0],
+            Direction::West => [0, -1],
+            Direction::East => [0, 1],
         }
     }
 

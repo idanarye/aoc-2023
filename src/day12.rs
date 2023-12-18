@@ -42,9 +42,9 @@ impl RowData {
         &self,
         individuals_offset: usize,
         damaged_groups_offset: usize,
-        memoization: &mut HashMap<(usize, usize), usize>,
+        memoization: &mut HashMap<[usize; 2], usize>,
     ) -> usize {
-        let memoization_key = (individuals_offset, damaged_groups_offset);
+        let memoization_key = [individuals_offset, damaged_groups_offset];
         if let Some(memoized_result) = memoization.get(&memoization_key) {
             return *memoized_result;
         }

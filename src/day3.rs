@@ -52,7 +52,7 @@ impl Map {
             let cell = if col == self.0.cols {
                 Cell::Empty
             } else {
-                self.0[(row, col)]
+                self.0[[row, col]]
             };
             match (cell, start) {
                 (Cell::Digit(_), None) => {
@@ -76,7 +76,7 @@ impl Map {
         &self,
         row: usize,
         cols: Range<usize>,
-    ) -> impl Iterator<Item = (usize, usize)> {
+    ) -> impl Iterator<Item = [usize; 2]> {
         let first_col = if 0 < cols.start {
             Some(cols.start - 1)
         } else {
@@ -105,14 +105,14 @@ impl Map {
         ranges
             .into_iter()
             .flatten()
-            .flat_map(|(row, cols)| cols.map(move |col| (row, col)))
+            .flat_map(|(row, cols)| cols.map(move |col| [row, col]))
     }
 
     fn symbols_around_number(
         &self,
         row: usize,
         cols: Range<usize>,
-    ) -> impl '_ + Iterator<Item = ((usize, usize), char)> {
+    ) -> impl '_ + Iterator<Item = ([usize; 2], char)> {
         self.locations_around(row, cols).filter_map(|pos| {
             if let Cell::Symbol(s) = self.0[pos] {
                 Some((pos, s))
@@ -130,7 +130,7 @@ impl Map {
         let (row, cols) = pos;
         let mut result = 0;
         for col in cols {
-            if let Cell::Digit(digit) = self.0[(row, col)] {
+            if let Cell::Digit(digit) = self.0[[row, col]] {
                 result *= 10;
                 result += digit as usize;
             } else {
@@ -150,7 +150,7 @@ pub fn part_1(input: &Map) -> usize {
 }
 
 pub fn part_2(input: &Map) -> usize {
-    let mut numbers_around_gears = HashMap::<(usize, usize), Vec<usize>>::default();
+    let mut numbers_around_gears = HashMap::<[usize; 2], Vec<usize>>::default();
     for (row, cols) in input.number_positions() {
         for (symbol_pos, symbol) in input.symbols_around_number(row, cols.clone()) {
             if symbol == '*' {
