@@ -72,11 +72,7 @@ impl Map {
         })
     }
 
-    fn locations_around(
-        &self,
-        row: usize,
-        cols: Range<usize>,
-    ) -> impl Iterator<Item = [usize; 2]> {
+    fn locations_around(&self, row: usize, cols: Range<usize>) -> impl Iterator<Item = [usize; 2]> {
         let first_col = if 0 < cols.start {
             Some(cols.start - 1)
         } else {
