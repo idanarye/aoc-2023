@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::ops::Range;
 
-use crate::vmatrix::VMatrix;
+use crate::common::vmatrix::VMatrix;
 
 #[derive(Debug)]
 pub struct Map(VMatrix<Cell>);

@@ -1,6 +1,6 @@
-use crate::bfs::HashMapBfs;
+use crate::common::bfs::HashMapBfs;
 use crate::common::direction::Direction;
-use crate::vmatrix::VMatrix;
+use crate::common::vmatrix::VMatrix;
 
 pub fn generator(input: &str) -> VMatrix<usize> {
     VMatrix::from_chars(input, |ch| {

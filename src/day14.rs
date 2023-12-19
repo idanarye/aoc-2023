@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
-use crate::vmatrix::VMatrix;
+use crate::common::vmatrix::VMatrix;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Tile {

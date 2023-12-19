@@ -1,6 +1,6 @@
 use std::fmt::{Display, Write as _};
 
-use crate::vmatrix::VMatrix;
+use crate::common::vmatrix::VMatrix;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Terrain {

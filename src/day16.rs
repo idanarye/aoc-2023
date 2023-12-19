@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use itertools::Itertools;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::bfs::HashMapBfs;
+use crate::common::bfs::HashMapBfs;
 use crate::common::direction::Direction;
-use crate::vmatrix::VMatrix;
+use crate::common::vmatrix::VMatrix;
 
 #[derive(Debug)]
 pub struct RowData {}

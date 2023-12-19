@@ -1,7 +1,7 @@
 use std::fmt::{Display, Write as _};
 
 use crate::common::direction::Direction;
-use crate::vmatrix::VMatrix;
+use crate::common::vmatrix::VMatrix;
 
 #[derive(Debug)]
 pub struct Input {

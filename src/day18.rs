@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
 use regex::Regex;
 
 use crate::common::direction::Direction;
-use crate::vmatrix::VMatrix;
+use crate::common::num_warp::NumWarp;
+use crate::common::vmatrix::VMatrix;
 
 #[derive(Debug)]
 #[allow(unused)]
@@ -49,64 +48,13 @@ fn visited_points(input: &[Instruction]) -> impl '_ + Iterator<Item = [isize; 2]
 }
 
 #[derive(Debug)]
-#[allow(unused)]
-struct DimensionWrapper {
-    mapper: HashMap<isize, usize>,
-    expands: Vec<usize>,
-    virtual_size: usize,
-}
-
-impl DimensionWrapper {
-    fn from_points(points: impl Iterator<Item = isize>) -> Self {
-        let mut points = points.collect_vec();
-        points.sort();
-
-        let mut mapper = HashMap::new();
-        let mut expands = Vec::new();
-
-        let mut points = points.into_iter();
-
-        let first = points.next().unwrap();
-        mapper.insert(first, 0);
-        expands.push(1);
-        let mut prev = first;
-
-        for point in points {
-            let dist = point - prev;
-            if dist <= 0 {
-                continue;
-            }
-            if 1 < dist {
-                expands.push(dist as usize - 1);
-            }
-            prev = point;
-
-            mapper.insert(point, expands.len());
-            expands.push(1);
-        }
-
-        let virtual_size = mapper.values().max().unwrap() + 1;
-
-        Self {
-            mapper,
-            expands,
-            virtual_size,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct SpaceWrapper([DimensionWrapper; 2]);
+struct SpaceWrapper([NumWarp<isize>; 2]);
 
 impl SpaceWrapper {
     fn new(input: &[Instruction]) -> Self {
         let visited_points = visited_points(input).collect_vec();
 
-        Self(
-            [0, 1].map(|d| {
-                DimensionWrapper::from_points(visited_points.iter().map(|coord| coord[d]))
-            }),
-        )
+        Self([0, 1].map(|d| NumWarp::new(visited_points.iter().map(|coord| coord[d]))))
     }
 
     fn map(&self, coord: [isize; 2]) -> [usize; 2] {
@@ -117,7 +65,7 @@ impl SpaceWrapper {
         coord
             .into_iter()
             .zip(&self.0)
-            .map(|(c, w)| w.expands[c])
+            .map(|(c, w)| w.expands[c].len())
             .product()
     }
 }
