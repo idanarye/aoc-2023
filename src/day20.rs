@@ -1,6 +1,7 @@
-use std::collections::{HashMap, VecDeque, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use itertools::Itertools;
+use num::Integer;
 use regex::Regex;
 
 use crate::common::bfs::HashMapBfs;
@@ -95,20 +96,32 @@ impl State {
         let module = self.topology.get(name).unwrap();
         match module.module_type {
             ModuleType::Interface => PulseType::Low,
-            ModuleType::FlipFlop => if self.flip_flops[name] {
-                PulseType::High
-            } else {
-                PulseType::Low
-            },
-            ModuleType::Conjunction => if self.conjunctions[name].values().all(|p| *p == PulseType::High) {
-                PulseType::Low
-            } else {
-                PulseType::High
+            ModuleType::FlipFlop => {
+                if self.flip_flops[name] {
+                    PulseType::High
+                } else {
+                    PulseType::Low
+                }
+            }
+            ModuleType::Conjunction => {
+                if self.conjunctions[name]
+                    .values()
+                    .all(|p| *p == PulseType::High)
+                {
+                    PulseType::Low
+                } else {
+                    PulseType::High
+                }
             }
         }
     }
 
-    fn send_pulse(&mut self, target: &str, pulse_type: PulseType, mut listener: impl FnMut(&str, PulseType, &str)) -> [usize; 2] {
+    fn send_pulse(
+        &mut self,
+        target: &str,
+        pulse_type: PulseType,
+        mut listener: impl FnMut(&str, PulseType, &str),
+    ) -> [usize; 2] {
         let mut pulse_queue = VecDeque::<(&str, PulseType, &str)>::new();
         pulse_queue.push_back(("", pulse_type, target));
 
@@ -117,7 +130,9 @@ impl State {
         while let Some((source, pulse_type, target)) = pulse_queue.pop_front() {
             listener(source, pulse_type, target);
             counts[pulse_type.idx()] += 1;
-            let Some(module) = self.topology.get(target) else { continue };
+            let Some(module) = self.topology.get(target) else {
+                continue;
+            };
             let out_pulse = match module.module_type {
                 ModuleType::Interface => pulse_type, // just resend the pulse
                 ModuleType::FlipFlop => {
@@ -126,11 +141,6 @@ impl State {
                             let flip_flop = self.flip_flops.get_mut(target).unwrap();
                             *flip_flop = !*flip_flop;
                             self.pulse_from(target)
-                            // if *flip_flop {
-                                // PulseType::High
-                            // } else {
-                                // PulseType::Low
-                            // }
                         }
                         PulseType::High => {
                             // Flip flops ignore high pulses and do not retransmit anything
@@ -142,11 +152,6 @@ impl State {
                     let conjunction = self.conjunctions.get_mut(target).unwrap();
                     *conjunction.get_mut(source).unwrap() = pulse_type;
                     self.pulse_from(target)
-                    // if conjunction.values().all(|p| *p == PulseType::High) {
-                        // PulseType::Low
-                    // } else {
-                        // PulseType::High
-                    // }
                 }
             };
             for output in module.outputs.iter() {
@@ -171,11 +176,18 @@ pub fn part_1(input: &[ModuleSpec]) -> usize {
 }
 
 pub fn part_2(input: &[ModuleSpec]) -> usize {
-    let all_outputs = input.iter().flat_map(|m| m.outputs.iter()).cloned().collect::<HashSet<String>>();
+    let all_outputs = input
+        .iter()
+        .flat_map(|m| m.outputs.iter())
+        .cloned()
+        .collect::<HashSet<String>>();
     let mut reverse_graph = HashMap::<String, Vec<String>>::new();
     for module in input.iter() {
         for output in module.outputs.iter() {
-            reverse_graph.entry(output.clone()).or_default().push(module.name.clone());
+            reverse_graph
+                .entry(output.clone())
+                .or_default()
+                .push(module.name.clone());
         }
     }
     let mut clusters = HashMap::<String, HashSet<String>>::new();
@@ -185,39 +197,24 @@ pub fn part_2(input: &[ModuleSpec]) -> usize {
         while let Some(name) = bfs.consider_next() {
             if let Some(outputs) = reverse_graph.get(name) {
                 for output in outputs.iter() {
-                    if output == ending_point {
-                        // println!("{} can reach itself", starting_point);
-                    }
                     bfs.add_edge(name, output, 1);
                 }
             }
         }
-        clusters.insert(ending_point.clone(), bfs.all_known().copied().cloned().collect());
+        clusters.insert(
+            ending_point.clone(),
+            bfs.all_known().copied().cloned().collect(),
+        );
     }
-
-    // let with_14 = clusters.values().filter(|c| c.len() == 14).map(|c| {
-        // let mut c = c.iter().collect_vec();
-        // c.sort();
-        // c
-    // }).collect::<HashSet<_>>();
-    // println!("{:?}", with_14.len());
-
-    // let Some(rx_sources) = reverse_graph.get("rx") else {
-        // println!("No module named rx");
-        // return 0;
-    // };
-    // assert_eq!(rx_sources.len(), 1);
 
     let mut state = State::new(input);
 
-    // let mut deps = vec!["rx".to_owned()];
     let mut deps = reverse_graph["rx"].clone();
     for _i in 0.. {
-        // for dep in deps.iter() {
-            // println!("{:?} -> {:?}", state.topology[dep], reverse_graph[dep]);
-        // }
-        let new_deps = deps.iter().flat_map(|d| reverse_graph[d].iter().cloned()).collect_vec();
-        // println!("{} {:?} depends on {:?} {:?}", i, deps.len(), new_deps.len(), new_deps);
+        let new_deps = deps
+            .iter()
+            .flat_map(|d| reverse_graph[d].iter().cloned())
+            .collect_vec();
         if 4 < new_deps.len() {
             break;
         }
@@ -226,29 +223,43 @@ pub fn part_2(input: &[ModuleSpec]) -> usize {
 
     // NOTE: the assumption is that such relevant subclusters need to all send high signal. This is
     // just how the input is structured.
-    let relevant_subclusters = deps.iter().map(|d| {
-        let mut c = clusters[d].iter().cloned().collect_vec();
-        c.sort();
-        c
-    }).collect_vec();
+    let relevant_subclusters = deps
+        .iter()
+        .map(|d| {
+            let mut c = clusters[d].iter().cloned().collect_vec();
+            c.sort();
+            c
+        })
+        .collect_vec();
 
-    let mut visited_states = relevant_subclusters.iter().map(|_| HashMap::<Vec<PulseType>, usize>::new()).collect_vec();
-    let mut detected_cycles: Vec<Option<(usize, usize)>> = relevant_subclusters.iter().map(|_| None).collect_vec();
+    let mut visited_states = relevant_subclusters
+        .iter()
+        .map(|_| HashMap::<Vec<PulseType>, usize>::new())
+        .collect_vec();
+    let mut detected_cycles: Vec<Option<usize>> =
+        relevant_subclusters.iter().map(|_| None).collect_vec();
     for i in 0.. {
         let mut result = Some(());
-        state.send_pulse("broadcaster", PulseType::Low, |_source, pulse_type, target| {
-            if target == "rx" && pulse_type == PulseType::Low {
-                result = None;
-            }
-        });
+        state.send_pulse(
+            "broadcaster",
+            PulseType::Low,
+            |_source, pulse_type, target| {
+                if target == "rx" && pulse_type == PulseType::Low {
+                    result = None;
+                }
+            },
+        );
 
-        for (cluster, (visited, detected)) in relevant_subclusters.iter().zip(visited_states.iter_mut().zip(detected_cycles.iter_mut())) {
+        for (cluster, (visited, detected)) in relevant_subclusters
+            .iter()
+            .zip(visited_states.iter_mut().zip(detected_cycles.iter_mut()))
+        {
             let cluster_state = cluster.iter().map(|m| state.pulse_from(m)).collect_vec();
             match visited.entry(cluster_state) {
                 std::collections::hash_map::Entry::Occupied(entry) => {
                     if detected.is_none() {
-                        println!("Detected");
-                        *detected = Some((*entry.get(), i));
+                        assert_eq!(*entry.get(), 0);
+                        *detected = Some(i);
                     }
                 }
                 std::collections::hash_map::Entry::Vacant(entry) => {
@@ -257,10 +268,13 @@ pub fn part_2(input: &[ModuleSpec]) -> usize {
             }
         }
         if detected_cycles.iter().all(|c| c.is_some()) {
-            println!("Detected all after {} steps", i);
             break;
         }
     }
-    println!("{:?}", detected_cycles);
-    0
+    let mut result = 1;
+    for cycle in detected_cycles {
+        // I don't know why it's always at the end of the cycle, but for some reason it does.
+        result = result.lcm(&cycle.unwrap());
+    }
+    result
 }
