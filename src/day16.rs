@@ -112,7 +112,7 @@ impl VMatrix<Tile> {
         while let Some((coord, direction)) = bfs.consider_next() {
             for new_direction in self[coord].process_light(direction) {
                 let new_coord = self.motion(coord, new_direction.motion());
-                if let Some(new_coord) = new_coord {
+                if let Ok(new_coord) = new_coord {
                     bfs.add_edge((coord, direction), (new_coord, new_direction), 1);
                 }
             }

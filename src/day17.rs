@@ -48,7 +48,7 @@ fn solve(
             .into_iter()
             .chain(turn_options.into_iter().flatten())
         {
-            if let Some(coord) = input.motion(state.coord, direction.motion()) {
+            if let Ok(coord) = input.motion(state.coord, direction.motion()) {
                 bfs.add_edge(
                     state.clone(),
                     State {

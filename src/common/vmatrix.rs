@@ -153,16 +153,28 @@ impl<T> VMatrix<T> {
         self.coord_to_index(coord).map(|i| &mut self.values[i])
     }
 
-    pub fn motion(&self, start: [usize; 2], vec: [isize; 2]) -> Option<[usize; 2]> {
-        let new_row = usize::try_from(start[0] as isize + vec[0]).ok()?;
-        if self.rows <= new_row {
-            return None;
+    pub fn motion(&self, start: [usize; 2], vec: [isize; 2]) -> Result<[usize; 2], [usize; 2]> {
+        let new_row = start[0] as isize + vec[0];
+        let new_col = start[1] as isize + vec[1];
+
+        if [new_row, new_col]
+            .into_iter()
+            .zip([self.rows, self.cols])
+            .all(|(coord, dim)| 0 <= coord && (coord as usize) < dim)
+        {
+            Ok([new_row as usize, new_col as usize])
+        } else {
+            Err([
+                new_row.rem_euclid(self.rows as isize) as usize,
+                new_col.rem_euclid(self.cols as isize) as usize,
+            ])
         }
-        let new_col = usize::try_from(start[1] as isize + vec[1]).ok()?;
-        if self.cols <= new_col {
-            return None;
-        }
-        Some([new_row, new_col])
+    }
+
+    pub fn motion_wrap(&self, start: [usize; 2], vec: [isize; 2]) -> [usize; 2] {
+        let new_row = (start[0] as isize + vec[0]).rem_euclid(self.rows as isize);
+        let new_col = (start[1] as isize + vec[1]).rem_euclid(self.cols as isize);
+        [new_row as usize, new_col as usize]
     }
 
     pub fn motions<'a>(
@@ -171,7 +183,7 @@ impl<T> VMatrix<T> {
         vecs: impl 'a + IntoIterator<Item = [isize; 2]>,
     ) -> impl 'a + Iterator<Item = [usize; 2]> {
         vecs.into_iter()
-            .filter_map(move |vec| self.motion(start, vec))
+            .filter_map(move |vec| self.motion(start, vec).ok())
     }
 
     pub fn iter(&self) -> impl '_ + Iterator<Item = ([usize; 2], &T)> {

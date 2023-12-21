@@ -119,7 +119,7 @@ impl VMatrix<Pipe> {
         let mut current_direction = Some(direction);
         std::iter::from_fn(move || {
             let direction = current_direction?;
-            coord = self.motion(coord, direction.motion())?;
+            coord = self.motion(coord, direction.motion()).ok()?;
             let pipe = self.get(coord)?;
             current_direction = pipe.route(direction);
             Some(coord)
@@ -130,7 +130,7 @@ impl VMatrix<Pipe> {
 impl Input {
     fn main_loop(&self) -> impl '_ + Iterator<Item = [usize; 2]> {
         for direction in Direction::ALL {
-            let Some(coord) = self.map.motion(self.start, direction.motion()) else {
+            let Ok(coord) = self.map.motion(self.start, direction.motion()) else {
                 continue;
             };
             let pipe = self.map[coord];
@@ -179,7 +179,7 @@ pub fn part_2(input: &Input) -> usize {
         let expanded_coord = expand(coord);
         fillmap[expanded_coord] = PaintStatus::MainLoop;
         for direction in input.map[coord].directions() {
-            let Some(adjacent) = fillmap.motion(expanded_coord, direction.motion()) else {
+            let Ok(adjacent) = fillmap.motion(expanded_coord, direction.motion()) else {
                 continue;
             };
             fillmap[adjacent] = PaintStatus::MainLoop;
