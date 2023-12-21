@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 
 use itertools::Itertools;
+use num::Integer;
 
 use crate::common::bfs::HashMapBfs;
 use crate::common::direction::Direction;
@@ -85,9 +86,7 @@ pub fn part_1(input: &Input) -> usize {
 }
 
 pub fn part_2(input: &Input) -> usize {
-    // let total_steps = 5000;
-    // let total_steps = 26501365;
-    let total_steps = 500;
+    let total_steps = 26501365;
     let mut bfs = HashMapBfs::default();
     bfs.add_root(([0, 0], input.start), 0);
     while let Some(parent) = bfs.consider_next() {
@@ -128,66 +127,103 @@ pub fn part_2(input: &Input) -> usize {
             .insert(pos, *bfs.cost(&(instance, pos)).unwrap());
     }
 
-    fn calc_uniform_step_diff(this: &HashMap<[usize; 2], usize>, that: &HashMap<[usize; 2], usize>) -> Option<usize> {
+    fn calc_uniform_step_diff(
+        this: &HashMap<[usize; 2], usize>,
+        that: &HashMap<[usize; 2], usize>,
+    ) -> Option<usize> {
         let diffs = this
             .iter()
             .filter_map(|(pos, this)| {
                 let that = that.get(pos)?;
                 Some(*this as isize - *that as isize)
             })
-        .collect::<HashSet<isize>>();
-        Some(diffs.into_iter().exactly_one().ok()?.abs() as usize)
+            .collect::<HashSet<isize>>();
+        Some(diffs.into_iter().exactly_one().ok()?.unsigned_abs())
     }
 
-    let instance_distance = instance_to_map.iter().flat_map(|(instance, instance_map)| {
-        Direction::ALL.into_iter().flat_map(|direction| {
-            let motion = direction.motion();
-            let neighbor = [instance[0] + motion[0], instance[1] + motion[1]];
-            let neighbor_map = instance_to_map.get(&neighbor)?;
-            calc_uniform_step_diff(instance_map, neighbor_map)
+    let instance_distance = instance_to_map
+        .iter()
+        .flat_map(|(instance, instance_map)| {
+            Direction::ALL.into_iter().flat_map(|direction| {
+                let motion = direction.motion();
+                let neighbor = [instance[0] + motion[0], instance[1] + motion[1]];
+                let neighbor_map = instance_to_map.get(&neighbor)?;
+                calc_uniform_step_diff(instance_map, neighbor_map)
+            })
         })
-    }).collect::<HashSet<usize>>().into_iter().exactly_one().expect("does not support the general input of non-rectangular gardens");
+        .collect::<HashSet<usize>>()
+        .into_iter()
+        .exactly_one()
+        .expect("does not support the general input of non-rectangular gardens");
+    assert!(
+        instance_distance % 2 == 1,
+        "does not support the general input of any parity"
+    );
     dbg!(instance_distance);
 
-    // for (p_this, m_this) in instance_to_map.iter() {
-        // for (p_that, m_that) in instance_to_map.iter() {
-            // if let Some(uniform_step_diff) = calc_uniform_step_diff(m_this, m_that) {
-                // println!("{:?} {:?} -> {:?}", p_this, p_that, uniform_step_diff);
-            // }
-        // }
-    // }
-
-    let source_garden_position = instance_to_map.keys().copied().filter(|pos| pos.into_iter().map(|p| p.abs()).max().unwrap() <= 1).collect_vec();
-
-    fn count_reachable(instance_map: &HashMap<[usize; 2], usize>, extra_steps: usize, num_steps: usize) -> usize {
-        instance_map.values().filter(|&&steps| {
-            let steps = steps + extra_steps;
-            steps <= num_steps && (steps % 2) == (num_steps % 2)
-        }).count()
+    fn calc_manhatten_length([x, y]: [isize; 2]) -> usize {
+        (x.abs() + y.abs()) as usize
     }
 
-    (0..).map(|manhatten_distance| {
-        source_garden_position.iter().map(|pos| {
-            let manhatten_distance_to_source = pos.into_iter().map(|p| p.abs() as usize).sum();
-            // if manhatten_distance < manhatten_distance_to_source {
-                // return 0;
-            // }
-            let dups = match manhatten_distance_to_source {
-                0 => if manhatten_distance == 0 { 1 } else { 0 },
-                1 => if 0 < manhatten_distance { 1 } else { 0 },
-                2 => manhatten_distance.max(1) - 1,
+    let source_garden_positions = instance_to_map
+        .keys()
+        .copied()
+        .filter(|pos| pos.iter().map(|p| p.abs()).max().unwrap() <= 1)
+        .collect_vec();
+
+    source_garden_positions
+        .iter()
+        .map(|&source_pos| {
+            let instance_map = &instance_to_map[&source_pos];
+            match calc_manhatten_length(source_pos) {
+                0 => instance_map
+                    .values()
+                    .filter(|&&steps| steps % 2 == total_steps % 2 && steps <= total_steps)
+                    .count(),
+                1 => instance_map
+                    .values()
+                    .filter_map(|&steps| {
+                        let remaining_steps = total_steps as isize - steps as isize;
+                        let remaining_steps = if remaining_steps.is_odd() {
+                            remaining_steps - instance_distance as isize
+                        } else {
+                            remaining_steps
+                        };
+                        if remaining_steps < 0 {
+                            return None;
+                        }
+                        Some(1 + remaining_steps as usize / (instance_distance * 2))
+                    })
+                    .sum(),
+                2 => instance_map
+                    .values()
+                    .filter_map(|&steps| {
+                        let remaining_steps =
+                            usize::try_from(total_steps as isize - steps as isize).ok()?;
+                        fn gauss_summation(a: usize, d: usize, n: usize) -> usize {
+                            n * (2 * a + (n - 1) * d) / 2
+                        }
+                        if remaining_steps.is_even() {
+                            Some(gauss_summation(
+                                1,
+                                2,
+                                1 + remaining_steps / (instance_distance * 2),
+                            ))
+                        } else {
+                            if remaining_steps < instance_distance {
+                                return None;
+                            }
+                            let remaining_steps = remaining_steps - instance_distance;
+                            Some(gauss_summation(
+                                2,
+                                2,
+                                1 + remaining_steps / (instance_distance * 2),
+                            ))
+                        }
+                    })
+                    .sum(),
                 _ => panic!(),
-            };
-            if dups == 0 {
-                return 0;
             }
-            let extra_steps = (manhatten_distance - manhatten_distance_to_source) * instance_distance;
-            // if total_steps < extra_steps {
-                // return 0;
-            // }
-            let reachable = dups * count_reachable(&instance_to_map[pos], extra_steps, total_steps);
-            // println!("Pos {pos:?}, Dist {manhatten_distance:?}, Extra {extra_steps:?}, Dups {dups:?}. Can reach {:?}", reachable);
-            reachable
-        }).sum::<usize>()
-    }).take_while(|&reachable| 0 < reachable).sum()
+        })
+        .sum()
 }
