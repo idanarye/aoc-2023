@@ -3,7 +3,7 @@ use crate::common::direction::Direction;
 use crate::common::vmatrix::VMatrix;
 
 pub fn generator(input: &str) -> VMatrix<usize> {
-    VMatrix::from_chars(input, |ch| {
+    VMatrix::from_chars(input, |_, ch| {
         ch.is_ascii_digit().then_some(ch as usize).unwrap() - '0' as usize
     })
 }

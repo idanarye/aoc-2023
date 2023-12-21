@@ -43,7 +43,7 @@ impl From<&Tile> for char {
 }
 
 pub fn generator(input: &str) -> VMatrix<Tile> {
-    VMatrix::from_chars(input, |ch| match ch {
+    VMatrix::from_chars(input, |_, ch| match ch {
         '.' => Tile::Empty,
         '/' => Tile::Mirror(MirrorDirection::Forward),
         '\\' => Tile::Mirror(MirrorDirection::Backward),

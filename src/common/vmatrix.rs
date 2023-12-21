@@ -40,10 +40,22 @@ impl<T> VMatrix<T> {
         }
     }
 
-    pub fn from_chars(input: &str, mut mapper: impl FnMut(char) -> T) -> Self {
+    pub fn from_chars(input: &str, mut mapper: impl FnMut([usize; 2], char) -> T) -> Self {
+        let mut row = 0;
+        let mut col = 0;
         input
             .chars()
-            .map(|ch| if ch == '\n' { None } else { Some(mapper(ch)) })
+            .map(move |ch| {
+                if ch == '\n' {
+                    row += 1;
+                    col = 0;
+                    None
+                } else {
+                    let result = mapper([row, col], ch);
+                    col += 1;
+                    Some(result)
+                }
+            })
             .collect()
     }
 
@@ -92,9 +104,11 @@ impl<T> VMatrix<T> {
 
     pub fn to_display_simple<'a>(
         &'a self,
-        value_formatter: impl 'a + Fn(&T) -> char,
+        value_formatter: impl 'a + Fn([usize; 2], &T) -> char,
     ) -> impl 'a + Display {
-        self.to_display(move |fmt, _, value| fmt.write_char(value_formatter(value)))
+        self.to_display(move |fmt, idx, value| {
+            fmt.write_char(value_formatter(self.index_to_coord(idx).unwrap(), value))
+        })
     }
 
     pub fn neighbors_no_diag(&self, node: usize) -> impl '_ + Iterator<Item = usize> {
@@ -187,6 +201,6 @@ where
     for<'a> &'a T: Into<char>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.to_display_simple(|value| value.into()).fmt(f)
+        self.to_display_simple(|_, value| value.into()).fmt(f)
     }
 }
