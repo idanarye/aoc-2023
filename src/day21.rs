@@ -85,14 +85,15 @@ pub fn part_1(input: &Input) -> usize {
 }
 
 pub fn part_2(input: &Input) -> usize {
-    let total_steps = 5000;
+    // let total_steps = 5000;
     // let total_steps = 26501365;
+    let total_steps = 10;
     let mut bfs = HashMapBfs::default();
     bfs.add_root(([0, 0], input.start), 0);
     while let Some(parent) = bfs.consider_next() {
         let (instance, coord) = parent;
         if total_steps <= *bfs.cost(&(instance, coord)).unwrap() {
-            continue;
+            // continue;
         }
         for direction in Direction::ALL {
             let motion = direction.motion();
@@ -146,143 +147,28 @@ pub fn part_2(input: &Input) -> usize {
     }).collect::<HashSet<usize>>().into_iter().exactly_one().expect("does not support the general input of non-rectangular gardens");
     println!("{:?}", instance_distance);
 
-    #[derive(Debug, Clone)]
-    struct Stats {
-        min: usize,
-        max: usize,
-        odd: usize,
-        even: usize,
+    let source_garden_position = instance_to_map.keys().copied().filter(|pos| pos.into_iter().map(|p| p.abs()).max().unwrap() <= 1).collect_vec();
+
+    fn count_reachable(instance_map: &HashMap<[usize; 2], usize>, num_steps: usize) -> usize {
+        instance_map.values().filter(|&&steps| steps <= num_steps && (steps % 2) == (num_steps % 2)).count()
     }
 
-    impl Stats {
-        fn add_steps(&self, steps: usize) -> Self {
-            let (odd, even) = if steps % 2 == 0 {
-                (self.odd, self.even)
-            } else {
-                (self.even, self.odd)
+    (0..).map(|manhatten_distance| {
+        let extra_steps = manhatten_distance * instance_distance;
+        if total_steps < extra_steps {
+            return 0;
+        }
+        source_garden_position.iter().map(|pos| {
+            let dups = match pos.into_iter().map(|p| p.abs()).sum() {
+                0 => if manhatten_distance == 0 { 1 } else { 0 },
+                1 => if 0 < manhatten_distance { 1 } else { 0 },
+                2 => manhatten_distance.max(1) - 1,
+                _ => panic!(),
             };
-            Self {
-                min: self.min + steps,
-                max: self.max + steps,
-                odd,
-                even,
+            if dups == 0 {
+                return 0;
             }
-        }
-    }
-
-    #[derive(Debug)]
-    enum InstanceStats {
-        Calculated(Stats),
-        Inferred {
-            based_on: [isize; 2],
-            steps_from: usize,
-            stats: Stats,
-        },
-    }
-
-    type WorldMap = HashMap<[isize; 2], InstanceStats>;
-
-    // impl InstanceStats {
-        // fn get_min(&self, world_map: &WorldMap) -> usize {
-            // if let world_map
-        // }
-    // }
-
-    let mut world_map = instance_to_map.iter().map(|(pos, instance)| {
-        let mut min = usize::MAX;
-        let mut max = 0;
-        let mut odd = 0;
-        let mut even = 0;
-        for steps in instance.values() {
-            min = min.min(*steps);
-            max = max.max(*steps);
-            if steps % 2 == 0 {
-                even += 1;
-            } else {
-                odd += 1;
-            }
-        }
-        (*pos, InstanceStats::Calculated(Stats{ min, max, odd, even }))
-    }).collect::<WorldMap>();
-
-    let mut bfs = HashMapBfs::<[isize; 2], usize>::default();
-    for pos in world_map.keys().copied() {
-        bfs.add_root(pos, pos.into_iter().map(|k| k.abs() as usize).sum());
-    }
-
-    while let Some(parent) = bfs.consider_next() {
-        let parent_stats;
-        let parent_based_on;
-        let parent_steps_from;
-        match &world_map[&parent] {
-            InstanceStats::Calculated(stats) => {
-                parent_based_on = parent;
-                parent_steps_from = 0;
-                parent_stats = stats.clone();
-            }
-            InstanceStats::Inferred { based_on, steps_from, stats } => {
-                parent_based_on = *based_on;
-                parent_steps_from = *steps_from;
-                parent_stats = stats.clone();
-            }
-        };
-
-        let stats = parent_stats.add_steps(instance_distance);
-        if total_steps < parent_stats.min {
-            continue;
-        }
-        let based_on = parent_based_on;
-        let steps_from = parent_steps_from + instance_distance;
-
-        for direction in Direction::ALL {
-            let motion = direction.motion();
-            let neighbor_pos = [parent[0] + motion[0], parent[1] + motion[1]];
-            world_map.entry(neighbor_pos).or_insert_with(|| InstanceStats::Inferred {
-                based_on,
-                steps_from,
-                stats: stats.clone(),
-            });
-            bfs.add_edge(parent, neighbor_pos, 1);
-        }
-    }
-
-    println!("{:?}", world_map[&[0, 0]]);
-    world_map.iter().map(|(instance_pos, instance_stats)| {
-        match instance_stats {
-            InstanceStats::Calculated(Stats { even, odd, .. }) => {
-                    if total_steps % 2 == 0 {
-                        *even
-                    } else {
-                        *odd
-                    }
-            }
-            InstanceStats::Inferred { based_on, steps_from, stats: Stats { even, odd, max, .. } } => {
-                if *max <= total_steps {
-                    if total_steps % 2 == 0 {
-                        *even
-                    } else {
-                        *odd
-                    }
-                } else {
-                    instance_to_map[&[0, 0]].keys().filter(|coord| {
-                        let Some(min_dist) = instance_to_map.iter().filter_map(|(orig_pos, orig_map)| {
-                            if orig_pos.into_iter().map(|p| p.abs() as usize).max().unwrap() < 2 {
-                                return None;
-                            }
-                            let orig_steps = orig_map.get(*coord)?;
-                            let manhattern_distance: usize = orig_pos.into_iter().zip(instance_pos).map(|(a, b)| (a - b).abs() as usize).sum();
-                            Some(manhattern_distance * instance_distance + *orig_steps)
-                        }).min() else {
-                            return false;
-                        };
-                        (min_dist % 2) == (total_steps % 2) && (min_dist <= total_steps)
-                    }).count()
-                    // instance_to_map[based_on].values().filter(|steps| {
-                        // let steps = *steps + steps_from;
-                        // steps % 2 == 0 && steps <= total_steps
-                    // }).count()
-                }
-            },
-        }
-    }).sum::<usize>() - 4
+            1 * count_reachable(&instance_to_map[pos], total_steps - extra_steps)
+        }).sum::<usize>()
+    }).take_while(|&reachable| 0 < reachable).sum()
 }
