@@ -2,13 +2,16 @@ use std::collections::{HashSet, VecDeque};
 use std::hash::Hash;
 use std::ops::Add;
 
+#[derive(Debug)]
 struct StackCell<K, C> {
     key: K,
     cost: C,
     children: VecDeque<(K, C)>,
 }
 
+#[derive(Debug)]
 pub struct HashMapDfs<K, C> {
+    root: Option<(K, C)>,
     stack: Vec<StackCell<K, C>>,
     visited: HashSet<K>,
 }
@@ -21,17 +24,23 @@ where
 {
     pub fn new(root: K, root_cost: C) -> Self {
         Self {
-            stack: vec![StackCell {
-                key: root.clone(),
-                cost: root_cost.clone(),
-                children: [(root, root_cost)].into_iter().collect(),
-            }],
+            root: Some((root.clone(), root_cost.clone())),
+            stack: Vec::new(),
             visited: HashSet::new(),
         }
     }
 
     pub fn consider_next(&mut self) -> Option<K> {
         loop {
+            if let Some((root, root_cost)) = self.root.take() {
+                self.visited.insert(root.clone());
+                self.stack.push(StackCell {
+                    key: root.clone(),
+                    cost: root_cost,
+                    children: VecDeque::default(),
+                });
+                return Some(root);
+            }
             let top_cell = self.stack.last_mut()?;
             if let Some((key, cost)) = top_cell.children.pop_front() {
                 self.visited.insert(key.clone());
@@ -52,7 +61,7 @@ where
         let top_cell = self.stack.last_mut().expect("No path is being inspected");
         assert!(
             top_cell.key == *parent,
-            "add_edge can only add edges to the currently considered node"
+            "can only add edges to the currently considered node"
         );
         if self.visited.contains(&key) {
             return false;
@@ -74,8 +83,28 @@ where
         let top_cell = self.stack.last().expect("No path is being inspected");
         assert!(
             top_cell.key == *key,
-            "cost can only inspect the currently considered node"
+            "can only inspect the currently considered node"
         );
         top_cell.cost.clone()
+    }
+
+    pub fn path_to(&self, key: &K) -> Vec<K> {
+        let top_cell = self.stack.last().expect("No path is being inspected");
+        assert!(
+            top_cell.key == *key,
+            "can only inspect the currently considered node"
+        );
+
+        self.stack.iter().skip(1).map(|stack_cell| stack_cell.key.clone()).collect()
+    }
+
+    pub fn parent(&self, key: &K) -> Option<K> {
+        let mut rev_it = self.stack.iter().rev();
+        let top_cell = rev_it.next().expect("No path is being inspected");
+        assert!(
+            top_cell.key == *key,
+            "can only inspect the currently considered node"
+        );
+        Some(rev_it.next()?.key.clone())
     }
 }

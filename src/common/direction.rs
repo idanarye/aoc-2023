@@ -35,4 +35,13 @@ impl Direction {
             Direction::East => Self::North,
         }
     }
+
+    pub fn reverse(&self) -> Direction {
+        match self {
+            Direction::North => Direction::South,
+            Direction::South => Direction::North,
+            Direction::West => Direction::East,
+            Direction::East => Direction::West,
+        }
+    }
 }
