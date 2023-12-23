@@ -47,12 +47,27 @@ function T:act()
     channelot.windowed_terminal_job{'cargo', 'run', '--profile', T:build_profile()}
 end
 
+T{alias = ':0'}
 function T:add_day()
+    local template_directories = {}
+    for template in vim.fs.dir('.copier/') do
+        if vim.startswith(template, 'day-template-') then
+            table.insert(template_directories, template)
+        end
+    end
+    local chosen_template = moonicipal.select(template_directories) or moonicipal.abort()
+    local template_path = '.copier/' .. chosen_template
+    moonicipal.fix_echo()
     local day = tonumber(moonicipal.input{
         default = vim.fn.strftime('%d'),
         prompt = 'Day number: ',
     }) or moonicipal.abort('No number selected')
-    vim.cmd('!copier copy -fd day=' .. day .. ' .copier/day-template .')
+    channelot.windowed_terminal_job{
+        'copier', 'copy',
+        '-fd', 'day=' .. day,
+        template_path,
+        '.',
+    }:check()
     do
         local lines = vim.fn.readfile('src/lib.rs')
         table.insert(lines, ('pub mod day%s;'):format(day))
