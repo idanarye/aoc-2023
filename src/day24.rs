@@ -2,13 +2,13 @@ use std::ops::RangeInclusive;
 
 use itertools::Itertools;
 
-#[derive(Debug)]
-pub struct RowData {
+#[derive(Debug, Clone)]
+pub struct Trajectory {
     pos: [isize; 3],
     vel: [isize; 3],
 }
 
-pub fn generator(input: &str) -> Vec<RowData> {
+pub fn generator(input: &str) -> Vec<Trajectory> {
     input
         .lines()
         .map(|line| {
@@ -20,7 +20,7 @@ pub fn generator(input: &str) -> Vec<RowData> {
                     .try_into()
                     .unwrap()
             }
-            RowData {
+            Trajectory {
                 pos: parse_vec3(pos),
                 vel: parse_vec3(vel),
             }
@@ -28,7 +28,7 @@ pub fn generator(input: &str) -> Vec<RowData> {
         .collect()
 }
 
-impl RowData {
+impl Trajectory {
     fn collision_times_xy(&self, other: &Self) -> Option<(f64, f64)> {
         // Mark:
         // - ps, po = position of self, other
@@ -70,9 +70,20 @@ impl RowData {
             self.pos[2] as f64 + time * self.vel[2] as f64,
         ]
     }
+
+    fn subtract_velocity(&self, velocity: [isize; 3]) -> Trajectory {
+        Trajectory {
+            pos: self.pos,
+            vel: [
+                self.vel[0] - velocity[0],
+                self.vel[1] - velocity[1],
+                self.vel[2] - velocity[2],
+            ],
+        }
+    }
 }
 
-pub fn part_1(input: &[RowData]) -> usize {
+pub fn part_1(input: &[Trajectory]) -> usize {
     const LIMIT: RangeInclusive<f64> = 200000000000000.0..=400000000000000.0;
     input
         .iter()
@@ -93,7 +104,58 @@ pub fn part_1(input: &[RowData]) -> usize {
         .sum()
 }
 
-pub fn part_2(input: &[RowData]) -> usize {
-    let _ = input;
-    0
+pub fn part_2(input: &[Trajectory]) -> isize {
+    (0..)
+        .flat_map(|md| {
+            (-md..=md).flat_map(move |x: isize| {
+                let y = md - x.abs();
+                [[x, y]].into_iter().chain((y != 0).then_some([x, -y]))
+            })
+        })
+        .find_map(|[vx, vy]| {
+            let rock_vel = [vx, vy, 0];
+            let mut it = input[1..].iter().map(|other| {
+                let (t1, _) = input[0]
+                    .subtract_velocity(rock_vel)
+                    .collision_times_xy(&other.subtract_velocity(rock_vel))
+                    .unwrap();
+                t1
+            });
+            let t0 = it.next().unwrap();
+            if !it.all(|time| (t0 - time).abs() < 0.1) {
+                return None;
+            }
+
+            let [px, py, pz0] = input[0].subtract_velocity(rock_vel).pos_at_time(t0);
+
+            let mut it = input[1..].iter().map(|hailstone| {
+                let hailstone = hailstone.subtract_velocity(rock_vel);
+                let t = (px - hailstone.pos[0] as f64) / hailstone.vel[0] as f64;
+                let [hpx, hpy, hpz] = hailstone.pos_at_time(t);
+                assert!((hpx - px).abs() < 0.1);
+                assert!((hpy - py).abs() < 0.1);
+                (t, hpz)
+            });
+
+            let (t1, pz1) = it.next().unwrap();
+
+            let vz = (pz1 - pz0) / (t1 - t0);
+
+            for (t, pz) in it {
+                if 0.1 < (vz - (pz - pz0) / (t - t0)) {
+                    return None;
+                }
+            }
+
+            let rock_vel = [vx, vy, vz as isize];
+            Some(
+                input[0]
+                    .pos_at_time(t0)
+                    .iter()
+                    .zip(rock_vel)
+                    .map(|(p0, rock_vel)| p0 - (rock_vel as f64 * t0))
+                    .sum::<f64>() as isize,
+            )
+        })
+        .unwrap()
 }
