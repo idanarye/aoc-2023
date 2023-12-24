@@ -95,7 +95,11 @@ where
             "can only inspect the currently considered node"
         );
 
-        self.stack.iter().skip(1).map(|stack_cell| stack_cell.key.clone()).collect()
+        self.stack
+            .iter()
+            .skip(1)
+            .map(|stack_cell| stack_cell.key.clone())
+            .collect()
     }
 
     pub fn parent(&self, key: &K) -> Option<K> {
