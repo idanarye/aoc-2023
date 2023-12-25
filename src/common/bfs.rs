@@ -136,16 +136,19 @@ where
         true
     }
 
-    #[allow(unused)]
-    pub fn path_to(&self, key: &K) -> Vec<K> {
+    pub fn get_path_to(&self, key: &K) -> Option<Vec<K>> {
         let mut result = Vec::new();
         let mut currentlly_at = Some(key);
         while let Some(at) = currentlly_at {
             result.push(at.clone());
-            currentlly_at = self.cells.get(at).unwrap().parent.as_ref();
+            currentlly_at = self.cells.get(at)?.parent.as_ref();
         }
         result.reverse();
-        result
+        Some(result)
+    }
+
+    pub fn path_to(&self, key: &K) -> Vec<K> {
+        self.get_path_to(key).expect("No path found")
     }
 
     pub fn all_known(&self) -> impl Iterator<Item = &K> {
